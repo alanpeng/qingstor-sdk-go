@@ -18,12 +18,11 @@
 package service
 
 import (
-	"context"
 	"net/http"
 
-	"github.com/qingstor/qingstor-sdk-go/v4/config"
-	"github.com/qingstor/qingstor-sdk-go/v4/request"
-	"github.com/qingstor/qingstor-sdk-go/v4/request/data"
+	"github.com/yunify/qingstor-sdk-go/v3/config"
+	"github.com/yunify/qingstor-sdk-go/v3/request"
+	"github.com/yunify/qingstor-sdk-go/v3/request/data"
 )
 
 var _ http.Header
@@ -41,22 +40,13 @@ func Init(c *config.Config) (*Service, error) {
 // ListBuckets does Retrieve the bucket list.
 // Documentation URL: https://docs.uit.com.cn/uitstor/api/service/get.html
 func (s *Service) ListBuckets(input *ListBucketsInput) (*ListBucketsOutput, error) {
-	return s.ListBucketsWithContext(context.Background(), input)
-}
-
-// ListBucketsWithContext add context support for ListBuckets
-func (s *Service) ListBucketsWithContext(ctx context.Context, input *ListBucketsInput) (*ListBucketsOutput, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	r, x, err := s.ListBucketsRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.SendWithContext(ctx)
+	err = r.Send()
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +85,6 @@ func (s *Service) ListBucketsRequest(input *ListBucketsInput) (*request.Request,
 
 // ListBucketsInput presents input for ListBuckets.
 type ListBucketsInput struct {
-	// Results count limit
-	Limit *int `json:"limit,omitempty" name:"limit" location:"query"`
-	// Limit results to keys that start at this offset
-	Offset *int `json:"offset,omitempty" name:"offset" location:"query"`
-
 	// Limits results to buckets that in the location
 	Location *string `json:"Location,omitempty" name:"Location" location:"headers"`
 }
