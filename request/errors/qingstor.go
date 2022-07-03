@@ -31,6 +31,6 @@ type QingStorError struct {
 // Error returns the description of QingStor error response.
 func (qse QingStorError) Error() string {
 	return fmt.Sprintf(
-		"UitStor Error: StatusCode \"%d\", Code \"%s\", Message \"%s\", Request ID \"%s\", Reference URL \"%s\"",
-		qse.StatusCode, qse.Code, qse.Message, qse.RequestID, qse.ReferenceURL)
+		"UitStor Error: StatusCode \"%d\", Code \"%s\", Message \"%s\", Request ID \"%s\"",
+		qse.StatusCode, qse.Code, qse.Message, qse.RequestID)
 }
