@@ -17,17 +17,18 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/yunify/qingstor-sdk-go/v3/config"
-	"github.com/yunify/qingstor-sdk-go/v3/request"
-	"github.com/yunify/qingstor-sdk-go/v3/request/data"
-	"github.com/yunify/qingstor-sdk-go/v3/request/errors"
-	"github.com/yunify/qingstor-sdk-go/v3/utils"
+	"github.com/qingstor/qingstor-sdk-go/v4/config"
+	"github.com/qingstor/qingstor-sdk-go/v4/request"
+	"github.com/qingstor/qingstor-sdk-go/v4/request/data"
+	"github.com/qingstor/qingstor-sdk-go/v4/request/errors"
+	"github.com/qingstor/qingstor-sdk-go/v4/utils"
 )
 
 var _ fmt.State
@@ -39,15 +40,24 @@ var _ config.Config
 var _ utils.Conn
 
 // AbortMultipartUpload does Abort multipart upload.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/abort_multipart_upload.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/abort_multipart_upload.html
 func (s *Bucket) AbortMultipartUpload(objectKey string, input *AbortMultipartUploadInput) (*AbortMultipartUploadOutput, error) {
+	return s.AbortMultipartUploadWithContext(context.Background(), objectKey, input)
+}
+
+// AbortMultipartUploadWithContext add context support for AbortMultipartUpload
+func (s *Bucket) AbortMultipartUploadWithContext(ctx context.Context, objectKey string, input *AbortMultipartUploadInput) (*AbortMultipartUploadOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.AbortMultipartUploadRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,16 +126,140 @@ type AbortMultipartUploadOutput struct {
 	RequestID *string `location:"requestID"`
 }
 
+// AppendObject does Append the Object.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/append.html
+func (s *Bucket) AppendObject(objectKey string, input *AppendObjectInput) (*AppendObjectOutput, error) {
+	return s.AppendObjectWithContext(context.Background(), objectKey, input)
+}
+
+// AppendObjectWithContext add context support for AppendObject
+func (s *Bucket) AppendObjectWithContext(ctx context.Context, objectKey string, input *AppendObjectInput) (*AppendObjectOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.AppendObjectRequest(objectKey, input)
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// AppendObjectRequest creates request and output object of AppendObject.
+func (s *Bucket) AppendObjectRequest(objectKey string, input *AppendObjectInput) (*request.Request, *AppendObjectOutput, error) {
+
+	if input == nil {
+		input = &AppendObjectInput{}
+	}
+
+	properties := *s.Properties
+
+	properties.ObjectKey = &objectKey
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "Append Object",
+		RequestMethod: "POST",
+		RequestURI:    "/<bucket-name>/<object-key>?append",
+		StatusCodes: []int{
+			200, // Object appended
+		},
+	}
+
+	x := &AppendObjectOutput{}
+	r, err := request.New(o, input, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// AppendObjectInput presents input for AppendObject.
+type AppendObjectInput struct {
+	// Object append position
+	Position *int64 `json:"position" name:"position" location:"query"` // Required
+
+	// Object content size
+	ContentLength *int64 `json:"Content-Length" name:"Content-Length" location:"headers"` // Required
+	// Object MD5sum
+	ContentMD5 *string `json:"Content-MD5,omitempty" name:"Content-MD5" location:"headers"`
+	// Object content type
+	ContentType *string `json:"Content-Type,omitempty" name:"Content-Type" location:"headers"`
+	// Specify the storage class for object
+	// XQSStorageClass's available values: STANDARD, STANDARD_IA
+	XQSStorageClass *string `json:"X-QS-Storage-Class,omitempty" name:"X-QS-Storage-Class" location:"headers"`
+
+	// The request body
+	Body io.Reader `location:"body"`
+}
+
+// Validate validates the input for AppendObject.
+func (v *AppendObjectInput) Validate() error {
+
+	if v.XQSStorageClass != nil {
+		xQSStorageClassValidValues := []string{"STANDARD", "STANDARD_IA"}
+		xQSStorageClassParameterValue := fmt.Sprint(*v.XQSStorageClass)
+
+		xQSStorageClassIsValid := false
+		for _, value := range xQSStorageClassValidValues {
+			if value == xQSStorageClassParameterValue {
+				xQSStorageClassIsValid = true
+			}
+		}
+
+		if !xQSStorageClassIsValid {
+			return errors.ParameterValueNotAllowedError{
+				ParameterName:  "XQSStorageClass",
+				ParameterValue: xQSStorageClassParameterValue,
+				AllowedValues:  xQSStorageClassValidValues,
+			}
+		}
+	}
+
+	return nil
+}
+
+// AppendObjectOutput presents output for AppendObject.
+type AppendObjectOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+
+	// next position when append data to this object
+	XQSNextAppendPosition *int64 `json:"X-QS-Next-Append-Position,omitempty" name:"X-QS-Next-Append-Position" location:"headers"`
+}
+
 // CompleteMultipartUpload does Complete multipart upload.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/complete_multipart_upload.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/complete_multipart_upload.html
 func (s *Bucket) CompleteMultipartUpload(objectKey string, input *CompleteMultipartUploadInput) (*CompleteMultipartUploadOutput, error) {
+	return s.CompleteMultipartUploadWithContext(context.Background(), objectKey, input)
+}
+
+// CompleteMultipartUploadWithContext add context support for CompleteMultipartUpload
+func (s *Bucket) CompleteMultipartUploadWithContext(ctx context.Context, objectKey string, input *CompleteMultipartUploadInput) (*CompleteMultipartUploadOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.CompleteMultipartUploadRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -225,15 +359,24 @@ type CompleteMultipartUploadOutput struct {
 }
 
 // DeleteObject does Delete the object.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/delete.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/delete.html
 func (s *Bucket) DeleteObject(objectKey string) (*DeleteObjectOutput, error) {
+	return s.DeleteObjectWithContext(context.Background(), objectKey)
+}
+
+// DeleteObjectWithContext add context support for DeleteObject
+func (s *Bucket) DeleteObjectWithContext(ctx context.Context, objectKey string) (*DeleteObjectOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.DeleteObjectRequest(objectKey)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -279,15 +422,24 @@ type DeleteObjectOutput struct {
 }
 
 // GetObject does Retrieve the object.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/get.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/get.html
 func (s *Bucket) GetObject(objectKey string, input *GetObjectInput) (*GetObjectOutput, error) {
+	return s.GetObjectWithContext(context.Background(), objectKey, input)
+}
+
+// GetObjectWithContext add context support for GetObject
+func (s *Bucket) GetObjectWithContext(ctx context.Context, objectKey string, input *GetObjectInput) (*GetObjectOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.GetObjectRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -416,15 +568,24 @@ func (o *GetObjectOutput) Close() (err error) {
 }
 
 // HeadObject does Check whether the object exists and available.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/head.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/head.html
 func (s *Bucket) HeadObject(objectKey string, input *HeadObjectInput) (*HeadObjectOutput, error) {
+	return s.HeadObjectWithContext(context.Background(), objectKey, input)
+}
+
+// HeadObjectWithContext add context support for HeadObject
+func (s *Bucket) HeadObjectWithContext(ctx context.Context, objectKey string, input *HeadObjectInput) (*HeadObjectOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.HeadObjectRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -507,20 +668,33 @@ type HeadObjectOutput struct {
 	XQSEncryptionCustomerAlgorithm *string `json:"X-QS-Encryption-Customer-Algorithm,omitempty" name:"X-QS-Encryption-Customer-Algorithm" location:"headers"`
 	// User-defined metadata
 	XQSMetaData *map[string]string `json:"X-QS-MetaData,omitempty" name:"X-QS-MetaData" location:"headers"`
+	// Next position when append data to this object, only returns when object type is appendable
+	XQSNextAppendPosition *int64 `json:"X-QS-Next-Append-Position,omitempty" name:"X-QS-Next-Append-Position" location:"headers"`
+	// Object type of this object, only returns when object type is appendable
+	XQSObjectType *string `json:"X-QS-Object-Type,omitempty" name:"X-QS-Object-Type" location:"headers"`
 	// Storage class of the object
 	XQSStorageClass *string `json:"X-QS-Storage-Class,omitempty" name:"X-QS-Storage-Class" location:"headers"`
 }
 
 // ImageProcess does Image process with the action on the object
-// Documentation URL: https://docs.qingcloud.com/qingstor/data_process/image_process/index.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/data_process/image_process/index.html
 func (s *Bucket) ImageProcess(objectKey string, input *ImageProcessInput) (*ImageProcessOutput, error) {
+	return s.ImageProcessWithContext(context.Background(), objectKey, input)
+}
+
+// ImageProcessWithContext add context support for ImageProcess
+func (s *Bucket) ImageProcessWithContext(ctx context.Context, objectKey string, input *ImageProcessInput) (*ImageProcessOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.ImageProcessRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -619,15 +793,24 @@ func (o *ImageProcessOutput) Close() (err error) {
 }
 
 // InitiateMultipartUpload does Initial multipart upload on the object.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/initiate_multipart_upload.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/initiate_multipart_upload.html
 func (s *Bucket) InitiateMultipartUpload(objectKey string, input *InitiateMultipartUploadInput) (*InitiateMultipartUploadOutput, error) {
+	return s.InitiateMultipartUploadWithContext(context.Background(), objectKey, input)
+}
+
+// InitiateMultipartUploadWithContext add context support for InitiateMultipartUpload
+func (s *Bucket) InitiateMultipartUploadWithContext(ctx context.Context, objectKey string, input *InitiateMultipartUploadInput) (*InitiateMultipartUploadOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.InitiateMultipartUploadRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -737,15 +920,24 @@ type InitiateMultipartUploadOutput struct {
 }
 
 // ListMultipart does List object parts.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/list_multipart.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/list_multipart.html
 func (s *Bucket) ListMultipart(objectKey string, input *ListMultipartInput) (*ListMultipartOutput, error) {
+	return s.ListMultipartWithContext(context.Background(), objectKey, input)
+}
+
+// ListMultipartWithContext add context support for ListMultipart
+func (s *Bucket) ListMultipartWithContext(ctx context.Context, objectKey string, input *ListMultipartInput) (*ListMultipartOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.ListMultipartRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -824,15 +1016,24 @@ type ListMultipartOutput struct {
 }
 
 // OptionsObject does Check whether the object accepts a origin with method and header.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/options.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/options.html
 func (s *Bucket) OptionsObject(objectKey string, input *OptionsObjectInput) (*OptionsObjectOutput, error) {
+	return s.OptionsObjectWithContext(context.Background(), objectKey, input)
+}
+
+// OptionsObjectWithContext add context support for OptionsObject
+func (s *Bucket) OptionsObjectWithContext(ctx context.Context, objectKey string, input *OptionsObjectInput) (*OptionsObjectOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.OptionsObjectRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -926,15 +1127,24 @@ type OptionsObjectOutput struct {
 }
 
 // PutObject does Upload the object.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/put.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/put.html
 func (s *Bucket) PutObject(objectKey string, input *PutObjectInput) (*PutObjectOutput, error) {
+	return s.PutObjectWithContext(context.Background(), objectKey, input)
+}
+
+// PutObjectWithContext add context support for PutObject
+func (s *Bucket) PutObjectWithContext(ctx context.Context, objectKey string, input *PutObjectInput) (*PutObjectOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.PutObjectRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1018,6 +1228,9 @@ type PutObjectInput struct {
 	XQSFetchSource *string `json:"X-QS-Fetch-Source,omitempty" name:"X-QS-Fetch-Source" location:"headers"`
 	// User-defined metadata
 	XQSMetaData *map[string]string `json:"X-QS-MetaData,omitempty" name:"X-QS-MetaData" location:"headers"`
+	// Use for modified metadata, valid (COPY/REPLACE)
+	// XQSMetadataDirective's available values: COPY, REPLACE
+	XQSMetadataDirective *string `json:"X-QS-Metadata-Directive,omitempty" name:"X-QS-Metadata-Directive" location:"headers"`
 	// Move source, format (/<bucket-name>/<object-key>)
 	XQSMoveSource *string `json:"X-QS-Move-Source,omitempty" name:"X-QS-Move-Source" location:"headers"`
 	// Specify the storage class for object
@@ -1035,6 +1248,26 @@ func (v *PutObjectInput) Validate() error {
 		XQSMetaDataerr := utils.IsMetaDataValid(v.XQSMetaData)
 		if XQSMetaDataerr != nil {
 			return XQSMetaDataerr
+		}
+	}
+
+	if v.XQSMetadataDirective != nil {
+		xQSMetadataDirectiveValidValues := []string{"COPY", "REPLACE"}
+		xQSMetadataDirectiveParameterValue := fmt.Sprint(*v.XQSMetadataDirective)
+
+		xQSMetadataDirectiveIsValid := false
+		for _, value := range xQSMetadataDirectiveValidValues {
+			if value == xQSMetadataDirectiveParameterValue {
+				xQSMetadataDirectiveIsValid = true
+			}
+		}
+
+		if !xQSMetadataDirectiveIsValid {
+			return errors.ParameterValueNotAllowedError{
+				ParameterName:  "XQSMetadataDirective",
+				ParameterValue: xQSMetadataDirectiveParameterValue,
+				AllowedValues:  xQSMetadataDirectiveValidValues,
+			}
 		}
 	}
 
@@ -1074,15 +1307,24 @@ type PutObjectOutput struct {
 }
 
 // UploadMultipart does Upload object multipart.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/object/multipart/upload_multipart.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/object/multipart/upload_multipart.html
 func (s *Bucket) UploadMultipart(objectKey string, input *UploadMultipartInput) (*UploadMultipartOutput, error) {
+	return s.UploadMultipartWithContext(context.Background(), objectKey, input)
+}
+
+// UploadMultipartWithContext add context support for UploadMultipart
+func (s *Bucket) UploadMultipartWithContext(ctx context.Context, objectKey string, input *UploadMultipartInput) (*UploadMultipartOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.UploadMultipartRequest(objectKey, input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}

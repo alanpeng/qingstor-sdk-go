@@ -17,17 +17,18 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/yunify/qingstor-sdk-go/v3/config"
-	"github.com/yunify/qingstor-sdk-go/v3/request"
-	"github.com/yunify/qingstor-sdk-go/v3/request/data"
-	"github.com/yunify/qingstor-sdk-go/v3/request/errors"
-	"github.com/yunify/qingstor-sdk-go/v3/utils"
+	"github.com/qingstor/qingstor-sdk-go/v4/config"
+	"github.com/qingstor/qingstor-sdk-go/v4/request"
+	"github.com/qingstor/qingstor-sdk-go/v4/request/data"
+	"github.com/qingstor/qingstor-sdk-go/v4/request/errors"
+	"github.com/qingstor/qingstor-sdk-go/v4/utils"
 )
 
 var _ fmt.State
@@ -56,15 +57,24 @@ func (s *Service) Bucket(bucketName string, zone string) (*Bucket, error) {
 }
 
 // Delete does Delete a bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/delete.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/delete.html
 func (s *Bucket) Delete() (*DeleteBucketOutput, error) {
+	return s.DeleteWithContext(context.Background())
+}
+
+// DeleteWithContext add context support for Delete
+func (s *Bucket) DeleteWithContext(ctx context.Context) (*DeleteBucketOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.DeleteRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -107,16 +117,110 @@ type DeleteBucketOutput struct {
 	RequestID *string `location:"requestID"`
 }
 
+// DeleteCNAME does Delete bucket CNAME setting of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/cname/delete_cname.html
+func (s *Bucket) DeleteCNAME(input *DeleteBucketCNAMEInput) (*DeleteBucketCNAMEOutput, error) {
+	return s.DeleteCNAMEWithContext(context.Background(), input)
+}
+
+// DeleteCNAMEWithContext add context support for DeleteCNAME
+func (s *Bucket) DeleteCNAMEWithContext(ctx context.Context, input *DeleteBucketCNAMEInput) (*DeleteBucketCNAMEOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.DeleteCNAMERequest(input)
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// DeleteCNAMERequest creates request and output object of DeleteBucketCNAME.
+func (s *Bucket) DeleteCNAMERequest(input *DeleteBucketCNAMEInput) (*request.Request, *DeleteBucketCNAMEOutput, error) {
+
+	if input == nil {
+		input = &DeleteBucketCNAMEInput{}
+	}
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "DELETE Bucket CNAME",
+		RequestMethod: "DELETE",
+		RequestURI:    "/<bucket-name>?cname",
+		StatusCodes: []int{
+			204, // No content
+		},
+	}
+
+	x := &DeleteBucketCNAMEOutput{}
+	r, err := request.New(o, input, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// DeleteBucketCNAMEInput presents input for DeleteBucketCNAME.
+type DeleteBucketCNAMEInput struct {
+	// domain name
+	Domain *string `json:"domain" name:"domain" location:"elements"` // Required
+
+}
+
+// Validate validates the input for DeleteBucketCNAME.
+func (v *DeleteBucketCNAMEInput) Validate() error {
+
+	if v.Domain == nil {
+		return errors.ParameterRequiredError{
+			ParameterName: "Domain",
+			ParentName:    "DeleteBucketCNAMEInput",
+		}
+	}
+
+	return nil
+}
+
+// DeleteBucketCNAMEOutput presents output for DeleteBucketCNAME.
+type DeleteBucketCNAMEOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+}
+
 // DeleteCORS does Delete CORS information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/cors/delete_cors.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/cors/delete_cors.html
 func (s *Bucket) DeleteCORS() (*DeleteBucketCORSOutput, error) {
+	return s.DeleteCORSWithContext(context.Background())
+}
+
+// DeleteCORSWithContext add context support for DeleteCORS
+func (s *Bucket) DeleteCORSWithContext(ctx context.Context) (*DeleteBucketCORSOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.DeleteCORSRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -160,15 +264,24 @@ type DeleteBucketCORSOutput struct {
 }
 
 // DeleteExternalMirror does Delete external mirror of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/external_mirror/delete_external_mirror.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/external_mirror/delete_external_mirror.html
 func (s *Bucket) DeleteExternalMirror() (*DeleteBucketExternalMirrorOutput, error) {
+	return s.DeleteExternalMirrorWithContext(context.Background())
+}
+
+// DeleteExternalMirrorWithContext add context support for DeleteExternalMirror
+func (s *Bucket) DeleteExternalMirrorWithContext(ctx context.Context) (*DeleteBucketExternalMirrorOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.DeleteExternalMirrorRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -212,15 +325,24 @@ type DeleteBucketExternalMirrorOutput struct {
 }
 
 // DeleteLifecycle does Delete Lifecycle information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/lifecycle/delete_lifecycle.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/lifecycle/delete_lifecycle.html
 func (s *Bucket) DeleteLifecycle() (*DeleteBucketLifecycleOutput, error) {
+	return s.DeleteLifecycleWithContext(context.Background())
+}
+
+// DeleteLifecycleWithContext add context support for DeleteLifecycle
+func (s *Bucket) DeleteLifecycleWithContext(ctx context.Context) (*DeleteBucketLifecycleOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.DeleteLifecycleRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -263,16 +385,86 @@ type DeleteBucketLifecycleOutput struct {
 	RequestID *string `location:"requestID"`
 }
 
+// DeleteLogging does Delete bucket logging setting of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/logging/delete_logging.html
+func (s *Bucket) DeleteLogging() (*DeleteBucketLoggingOutput, error) {
+	return s.DeleteLoggingWithContext(context.Background())
+}
+
+// DeleteLoggingWithContext add context support for DeleteLogging
+func (s *Bucket) DeleteLoggingWithContext(ctx context.Context) (*DeleteBucketLoggingOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.DeleteLoggingRequest()
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// DeleteLoggingRequest creates request and output object of DeleteBucketLogging.
+func (s *Bucket) DeleteLoggingRequest() (*request.Request, *DeleteBucketLoggingOutput, error) {
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "DELETE Bucket Logging",
+		RequestMethod: "DELETE",
+		RequestURI:    "/<bucket-name>?logging",
+		StatusCodes: []int{
+			204, // No content
+		},
+	}
+
+	x := &DeleteBucketLoggingOutput{}
+	r, err := request.New(o, nil, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// DeleteBucketLoggingOutput presents output for DeleteBucketLogging.
+type DeleteBucketLoggingOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+}
+
 // DeleteNotification does Delete Notification information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/notification/delete_notification.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/notification/delete_notification.html
 func (s *Bucket) DeleteNotification() (*DeleteBucketNotificationOutput, error) {
+	return s.DeleteNotificationWithContext(context.Background())
+}
+
+// DeleteNotificationWithContext add context support for DeleteNotification
+func (s *Bucket) DeleteNotificationWithContext(ctx context.Context) (*DeleteBucketNotificationOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.DeleteNotificationRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -316,15 +508,24 @@ type DeleteBucketNotificationOutput struct {
 }
 
 // DeletePolicy does Delete policy information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/policy/delete_policy.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/policy/delete_policy.html
 func (s *Bucket) DeletePolicy() (*DeleteBucketPolicyOutput, error) {
+	return s.DeletePolicyWithContext(context.Background())
+}
+
+// DeletePolicyWithContext add context support for DeletePolicy
+func (s *Bucket) DeletePolicyWithContext(ctx context.Context) (*DeleteBucketPolicyOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.DeletePolicyRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -367,16 +568,86 @@ type DeleteBucketPolicyOutput struct {
 	RequestID *string `location:"requestID"`
 }
 
+// DeleteReplication does Delete Replication information of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/replication/delete_replication.html
+func (s *Bucket) DeleteReplication() (*DeleteBucketReplicationOutput, error) {
+	return s.DeleteReplicationWithContext(context.Background())
+}
+
+// DeleteReplicationWithContext add context support for DeleteReplication
+func (s *Bucket) DeleteReplicationWithContext(ctx context.Context) (*DeleteBucketReplicationOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.DeleteReplicationRequest()
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// DeleteReplicationRequest creates request and output object of DeleteBucketReplication.
+func (s *Bucket) DeleteReplicationRequest() (*request.Request, *DeleteBucketReplicationOutput, error) {
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "DELETE Bucket Replication",
+		RequestMethod: "DELETE",
+		RequestURI:    "/<bucket-name>?replication",
+		StatusCodes: []int{
+			204, // Replication deleted
+		},
+	}
+
+	x := &DeleteBucketReplicationOutput{}
+	r, err := request.New(o, nil, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// DeleteBucketReplicationOutput presents output for DeleteBucketReplication.
+type DeleteBucketReplicationOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+}
+
 // DeleteMultipleObjects does Delete multiple objects from the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/delete_multiple.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/delete_multiple.html
 func (s *Bucket) DeleteMultipleObjects(input *DeleteMultipleObjectsInput) (*DeleteMultipleObjectsOutput, error) {
+	return s.DeleteMultipleObjectsWithContext(context.Background(), input)
+}
+
+// DeleteMultipleObjectsWithContext add context support for DeleteMultipleObjects
+func (s *Bucket) DeleteMultipleObjectsWithContext(ctx context.Context, input *DeleteMultipleObjectsInput) (*DeleteMultipleObjectsOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.DeleteMultipleObjectsRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -459,15 +730,24 @@ type DeleteMultipleObjectsOutput struct {
 }
 
 // GetACL does Get ACL information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/get_acl.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/get_acl.html
 func (s *Bucket) GetACL() (*GetBucketACLOutput, error) {
+	return s.GetACLWithContext(context.Background())
+}
+
+// GetACLWithContext add context support for GetACL
+func (s *Bucket) GetACLWithContext(ctx context.Context) (*GetBucketACLOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.GetACLRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -515,16 +795,128 @@ type GetBucketACLOutput struct {
 	Owner *OwnerType `json:"owner,omitempty" name:"owner" location:"elements"`
 }
 
+// GetCNAME does Get bucket CNAME setting of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/cname/get_cname.html
+func (s *Bucket) GetCNAME(input *GetBucketCNAMEInput) (*GetBucketCNAMEOutput, error) {
+	return s.GetCNAMEWithContext(context.Background(), input)
+}
+
+// GetCNAMEWithContext add context support for GetCNAME
+func (s *Bucket) GetCNAMEWithContext(ctx context.Context, input *GetBucketCNAMEInput) (*GetBucketCNAMEOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.GetCNAMERequest(input)
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// GetCNAMERequest creates request and output object of GetBucketCNAME.
+func (s *Bucket) GetCNAMERequest(input *GetBucketCNAMEInput) (*request.Request, *GetBucketCNAMEOutput, error) {
+
+	if input == nil {
+		input = &GetBucketCNAMEInput{}
+	}
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "GET Bucket CNAME",
+		RequestMethod: "GET",
+		RequestURI:    "/<bucket-name>?cname",
+		StatusCodes: []int{
+			200, // OK
+		},
+	}
+
+	x := &GetBucketCNAMEOutput{}
+	r, err := request.New(o, input, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// GetBucketCNAMEInput presents input for GetBucketCNAME.
+type GetBucketCNAMEInput struct {
+	// Limit the type used for query, normal will be recognized if empty.
+	// Type's available values: website, normal
+	Type *string `json:"type,omitempty" name:"type" location:"query"`
+}
+
+// Validate validates the input for GetBucketCNAME.
+func (v *GetBucketCNAMEInput) Validate() error {
+
+	if v.Type != nil {
+		typeValidValues := []string{"website", "normal"}
+		typeParameterValue := fmt.Sprint(*v.Type)
+
+		typeIsValid := false
+		for _, value := range typeValidValues {
+			if value == typeParameterValue {
+				typeIsValid = true
+			}
+		}
+
+		if !typeIsValid {
+			return errors.ParameterValueNotAllowedError{
+				ParameterName:  "Type",
+				ParameterValue: typeParameterValue,
+				AllowedValues:  typeValidValues,
+			}
+		}
+	}
+
+	return nil
+}
+
+// GetBucketCNAMEOutput presents output for GetBucketCNAME.
+type GetBucketCNAMEOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+
+	// the details of all eligible CNAME records.
+	CnameRecords []*CnameRecordType `json:"cname_records,omitempty" name:"cname_records" location:"elements"`
+	// the count of all eligible CNAME records.
+	Count *int `json:"count,omitempty" name:"count" location:"elements"`
+}
+
 // GetCORS does Get CORS information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/cors/get_cors.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/cors/get_cors.html
 func (s *Bucket) GetCORS() (*GetBucketCORSOutput, error) {
+	return s.GetCORSWithContext(context.Background())
+}
+
+// GetCORSWithContext add context support for GetCORS
+func (s *Bucket) GetCORSWithContext(ctx context.Context) (*GetBucketCORSOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.GetCORSRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -571,15 +963,24 @@ type GetBucketCORSOutput struct {
 }
 
 // GetExternalMirror does Get external mirror of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/external_mirror/get_external_mirror.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/external_mirror/get_external_mirror.html
 func (s *Bucket) GetExternalMirror() (*GetBucketExternalMirrorOutput, error) {
+	return s.GetExternalMirrorWithContext(context.Background())
+}
+
+// GetExternalMirrorWithContext add context support for GetExternalMirror
+func (s *Bucket) GetExternalMirrorWithContext(ctx context.Context) (*GetBucketExternalMirrorOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.GetExternalMirrorRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -626,15 +1027,24 @@ type GetBucketExternalMirrorOutput struct {
 }
 
 // GetLifecycle does Get Lifecycle information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/lifecycle/get_lifecycle.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/lifecycle/get_lifecycle.html
 func (s *Bucket) GetLifecycle() (*GetBucketLifecycleOutput, error) {
+	return s.GetLifecycleWithContext(context.Background())
+}
+
+// GetLifecycleWithContext add context support for GetLifecycle
+func (s *Bucket) GetLifecycleWithContext(ctx context.Context) (*GetBucketLifecycleOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.GetLifecycleRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -680,16 +1090,91 @@ type GetBucketLifecycleOutput struct {
 	Rule []*RuleType `json:"rule,omitempty" name:"rule" location:"elements"`
 }
 
+// GetLogging does Get bucket logging setting of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/logging/get_logging.html
+func (s *Bucket) GetLogging() (*GetBucketLoggingOutput, error) {
+	return s.GetLoggingWithContext(context.Background())
+}
+
+// GetLoggingWithContext add context support for GetLogging
+func (s *Bucket) GetLoggingWithContext(ctx context.Context) (*GetBucketLoggingOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.GetLoggingRequest()
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// GetLoggingRequest creates request and output object of GetBucketLogging.
+func (s *Bucket) GetLoggingRequest() (*request.Request, *GetBucketLoggingOutput, error) {
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "GET Bucket Logging",
+		RequestMethod: "GET",
+		RequestURI:    "/<bucket-name>?logging",
+		StatusCodes: []int{
+			200, // OK
+		},
+	}
+
+	x := &GetBucketLoggingOutput{}
+	r, err := request.New(o, nil, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// GetBucketLoggingOutput presents output for GetBucketLogging.
+type GetBucketLoggingOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+
+	// The name of the bucket used to store logs. The user must be the owner of the bucket.
+	TargetBucket *string `json:"target_bucket,omitempty" name:"target_bucket" location:"elements"`
+	// generated log files' common prefix
+	TargetPrefix *string `json:"target_prefix,omitempty" name:"target_prefix" location:"elements"`
+}
+
 // GetNotification does Get Notification information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/notification/get_notification.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/notification/get_notification.html
 func (s *Bucket) GetNotification() (*GetBucketNotificationOutput, error) {
+	return s.GetNotificationWithContext(context.Background())
+}
+
+// GetNotificationWithContext add context support for GetNotification
+func (s *Bucket) GetNotificationWithContext(ctx context.Context) (*GetBucketNotificationOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.GetNotificationRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -736,15 +1221,24 @@ type GetBucketNotificationOutput struct {
 }
 
 // GetPolicy does Get policy information of the bucket.
-// Documentation URL: https://https://docs.qingcloud.com/qingstor/api/bucket/policy/get_policy.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/policy/get_policy.html
 func (s *Bucket) GetPolicy() (*GetBucketPolicyOutput, error) {
+	return s.GetPolicyWithContext(context.Background())
+}
+
+// GetPolicyWithContext add context support for GetPolicy
+func (s *Bucket) GetPolicyWithContext(ctx context.Context) (*GetBucketPolicyOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.GetPolicyRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -790,16 +1284,89 @@ type GetBucketPolicyOutput struct {
 	Statement []*StatementType `json:"statement,omitempty" name:"statement" location:"elements"`
 }
 
+// GetReplication does Get Replication information of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/replication/get_replication.html
+func (s *Bucket) GetReplication() (*GetBucketReplicationOutput, error) {
+	return s.GetReplicationWithContext(context.Background())
+}
+
+// GetReplicationWithContext add context support for GetReplication
+func (s *Bucket) GetReplicationWithContext(ctx context.Context) (*GetBucketReplicationOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.GetReplicationRequest()
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// GetReplicationRequest creates request and output object of GetBucketReplication.
+func (s *Bucket) GetReplicationRequest() (*request.Request, *GetBucketReplicationOutput, error) {
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "GET Bucket Replication",
+		RequestMethod: "GET",
+		RequestURI:    "/<bucket-name>?replication",
+		StatusCodes: []int{
+			200, // OK
+		},
+	}
+
+	x := &GetBucketReplicationOutput{}
+	r, err := request.New(o, nil, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// GetBucketReplicationOutput presents output for GetBucketReplication.
+type GetBucketReplicationOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+
+	// Bucket Replication rule
+	Rules []*RulesType `json:"rules,omitempty" name:"rules" location:"elements"`
+}
+
 // GetStatistics does Get statistics information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/get_stats.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/get_stats.html
 func (s *Bucket) GetStatistics() (*GetBucketStatisticsOutput, error) {
+	return s.GetStatisticsWithContext(context.Background())
+}
+
+// GetStatisticsWithContext add context support for GetStatistics
+func (s *Bucket) GetStatisticsWithContext(ctx context.Context) (*GetBucketStatisticsOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.GetStatisticsRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -859,15 +1426,24 @@ type GetBucketStatisticsOutput struct {
 }
 
 // Head does Check whether the bucket exists and available.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/head.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/head.html
 func (s *Bucket) Head() (*HeadBucketOutput, error) {
+	return s.HeadWithContext(context.Background())
+}
+
+// HeadWithContext add context support for Head
+func (s *Bucket) HeadWithContext(ctx context.Context) (*HeadBucketOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.HeadRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -911,15 +1487,24 @@ type HeadBucketOutput struct {
 }
 
 // ListMultipartUploads does List multipart uploads in the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/list_multipart_uploads.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/list_multipart_uploads.html
 func (s *Bucket) ListMultipartUploads(input *ListMultipartUploadsInput) (*ListMultipartUploadsOutput, error) {
+	return s.ListMultipartUploadsWithContext(context.Background(), input)
+}
+
+// ListMultipartUploadsWithContext add context support for ListMultipartUploads
+func (s *Bucket) ListMultipartUploadsWithContext(ctx context.Context, input *ListMultipartUploadsInput) (*ListMultipartUploadsOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.ListMultipartUploadsRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1008,15 +1593,24 @@ type ListMultipartUploadsOutput struct {
 }
 
 // ListObjects does Retrieve the object list in a bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/get.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/get.html
 func (s *Bucket) ListObjects(input *ListObjectsInput) (*ListObjectsOutput, error) {
+	return s.ListObjectsWithContext(context.Background(), input)
+}
+
+// ListObjectsWithContext add context support for ListObjects
+func (s *Bucket) ListObjectsWithContext(ctx context.Context, input *ListObjectsInput) (*ListObjectsOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.ListObjectsRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1103,15 +1697,24 @@ type ListObjectsOutput struct {
 }
 
 // Put does Create a new bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/put.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/put.html
 func (s *Bucket) Put() (*PutBucketOutput, error) {
+	return s.PutWithContext(context.Background())
+}
+
+// PutWithContext add context support for Put
+func (s *Bucket) PutWithContext(ctx context.Context) (*PutBucketOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.PutRequest()
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1155,15 +1758,24 @@ type PutBucketOutput struct {
 }
 
 // PutACL does Set ACL information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/put_acl.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/put_acl.html
 func (s *Bucket) PutACL(input *PutBucketACLInput) (*PutBucketACLOutput, error) {
+	return s.PutACLWithContext(context.Background(), input)
+}
+
+// PutACLWithContext add context support for PutACL
+func (s *Bucket) PutACLWithContext(ctx context.Context, input *PutBucketACLInput) (*PutBucketACLOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.PutACLRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1238,16 +1850,132 @@ type PutBucketACLOutput struct {
 	RequestID *string `location:"requestID"`
 }
 
+// PutCNAME does Set bucket CNAME of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/cname/put_cname.html
+func (s *Bucket) PutCNAME(input *PutBucketCNAMEInput) (*PutBucketCNAMEOutput, error) {
+	return s.PutCNAMEWithContext(context.Background(), input)
+}
+
+// PutCNAMEWithContext add context support for PutCNAME
+func (s *Bucket) PutCNAMEWithContext(ctx context.Context, input *PutBucketCNAMEInput) (*PutBucketCNAMEOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.PutCNAMERequest(input)
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// PutCNAMERequest creates request and output object of PutBucketCNAME.
+func (s *Bucket) PutCNAMERequest(input *PutBucketCNAMEInput) (*request.Request, *PutBucketCNAMEOutput, error) {
+
+	if input == nil {
+		input = &PutBucketCNAMEInput{}
+	}
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "PUT Bucket CNAME",
+		RequestMethod: "PUT",
+		RequestURI:    "/<bucket-name>?cname",
+		StatusCodes: []int{
+			200, // OK
+		},
+	}
+
+	x := &PutBucketCNAMEOutput{}
+	r, err := request.New(o, input, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// PutBucketCNAMEInput presents input for PutBucketCNAME.
+type PutBucketCNAMEInput struct {
+	// The domain name to be bound to the bucket. The domain name must have been registered and not bound to another bucket.
+	Domain *string `json:"domain" name:"domain" location:"elements"` // Required
+	// The purpose of the domain name to be bound. Currently supports two types, normal and website.
+	// Type's available values: normal, website
+	Type *string `json:"type,omitempty" name:"type" location:"elements"`
+}
+
+// Validate validates the input for PutBucketCNAME.
+func (v *PutBucketCNAMEInput) Validate() error {
+
+	if v.Domain == nil {
+		return errors.ParameterRequiredError{
+			ParameterName: "Domain",
+			ParentName:    "PutBucketCNAMEInput",
+		}
+	}
+
+	if v.Type != nil {
+		typeValidValues := []string{"normal", "website"}
+		typeParameterValue := fmt.Sprint(*v.Type)
+
+		typeIsValid := false
+		for _, value := range typeValidValues {
+			if value == typeParameterValue {
+				typeIsValid = true
+			}
+		}
+
+		if !typeIsValid {
+			return errors.ParameterValueNotAllowedError{
+				ParameterName:  "Type",
+				ParameterValue: typeParameterValue,
+				AllowedValues:  typeValidValues,
+			}
+		}
+	}
+
+	return nil
+}
+
+// PutBucketCNAMEOutput presents output for PutBucketCNAME.
+type PutBucketCNAMEOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+}
+
 // PutCORS does Set CORS information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/cors/put_cors.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/cors/put_cors.html
 func (s *Bucket) PutCORS(input *PutBucketCORSInput) (*PutBucketCORSOutput, error) {
+	return s.PutCORSWithContext(context.Background(), input)
+}
+
+// PutCORSWithContext add context support for PutCORS
+func (s *Bucket) PutCORSWithContext(ctx context.Context, input *PutBucketCORSInput) (*PutBucketCORSOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.PutCORSRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1323,15 +2051,24 @@ type PutBucketCORSOutput struct {
 }
 
 // PutExternalMirror does Set external mirror of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/external_mirror/put_external_mirror.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/external_mirror/put_external_mirror.html
 func (s *Bucket) PutExternalMirror(input *PutBucketExternalMirrorInput) (*PutBucketExternalMirrorOutput, error) {
+	return s.PutExternalMirrorWithContext(context.Background(), input)
+}
+
+// PutExternalMirrorWithContext add context support for PutExternalMirror
+func (s *Bucket) PutExternalMirrorWithContext(ctx context.Context, input *PutBucketExternalMirrorInput) (*PutBucketExternalMirrorOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.PutExternalMirrorRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1399,15 +2136,24 @@ type PutBucketExternalMirrorOutput struct {
 }
 
 // PutLifecycle does Set Lifecycle information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/lifecycle/put_lifecycle.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/lifecycle/put_lifecycle.html
 func (s *Bucket) PutLifecycle(input *PutBucketLifecycleInput) (*PutBucketLifecycleOutput, error) {
+	return s.PutLifecycleWithContext(context.Background(), input)
+}
+
+// PutLifecycleWithContext add context support for PutLifecycle
+func (s *Bucket) PutLifecycleWithContext(ctx context.Context, input *PutBucketLifecycleInput) (*PutBucketLifecycleOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.PutLifecycleRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1482,16 +2228,119 @@ type PutBucketLifecycleOutput struct {
 	RequestID *string `location:"requestID"`
 }
 
+// PutLogging does Set bucket logging of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/logging/put_logging.html
+func (s *Bucket) PutLogging(input *PutBucketLoggingInput) (*PutBucketLoggingOutput, error) {
+	return s.PutLoggingWithContext(context.Background(), input)
+}
+
+// PutLoggingWithContext add context support for PutLogging
+func (s *Bucket) PutLoggingWithContext(ctx context.Context, input *PutBucketLoggingInput) (*PutBucketLoggingOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.PutLoggingRequest(input)
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// PutLoggingRequest creates request and output object of PutBucketLogging.
+func (s *Bucket) PutLoggingRequest(input *PutBucketLoggingInput) (*request.Request, *PutBucketLoggingOutput, error) {
+
+	if input == nil {
+		input = &PutBucketLoggingInput{}
+	}
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "PUT Bucket Logging",
+		RequestMethod: "PUT",
+		RequestURI:    "/<bucket-name>?logging",
+		StatusCodes: []int{
+			200, // OK
+		},
+	}
+
+	x := &PutBucketLoggingOutput{}
+	r, err := request.New(o, input, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// PutBucketLoggingInput presents input for PutBucketLogging.
+type PutBucketLoggingInput struct {
+	// The name of the bucket used to store logs. The user must be the owner of the bucket.
+	TargetBucket *string `json:"target_bucket" name:"target_bucket" location:"elements"` // Required
+	// generated log files' common prefix
+	TargetPrefix *string `json:"target_prefix" name:"target_prefix" location:"elements"` // Required
+
+}
+
+// Validate validates the input for PutBucketLogging.
+func (v *PutBucketLoggingInput) Validate() error {
+
+	if v.TargetBucket == nil {
+		return errors.ParameterRequiredError{
+			ParameterName: "TargetBucket",
+			ParentName:    "PutBucketLoggingInput",
+		}
+	}
+
+	if v.TargetPrefix == nil {
+		return errors.ParameterRequiredError{
+			ParameterName: "TargetPrefix",
+			ParentName:    "PutBucketLoggingInput",
+		}
+	}
+
+	return nil
+}
+
+// PutBucketLoggingOutput presents output for PutBucketLogging.
+type PutBucketLoggingOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+}
+
 // PutNotification does Set Notification information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/notification/put_notification.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/notification/put_notification.html
 func (s *Bucket) PutNotification(input *PutBucketNotificationInput) (*PutBucketNotificationOutput, error) {
+	return s.PutNotificationWithContext(context.Background(), input)
+}
+
+// PutNotificationWithContext add context support for PutNotification
+func (s *Bucket) PutNotificationWithContext(ctx context.Context, input *PutBucketNotificationInput) (*PutBucketNotificationOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.PutNotificationRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1567,15 +2416,24 @@ type PutBucketNotificationOutput struct {
 }
 
 // PutPolicy does Set policy information of the bucket.
-// Documentation URL: https://docs.qingcloud.com/qingstor/api/bucket/policy/put_policy.html
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/policy/put_policy.html
 func (s *Bucket) PutPolicy(input *PutBucketPolicyInput) (*PutBucketPolicyOutput, error) {
+	return s.PutPolicyWithContext(context.Background(), input)
+}
+
+// PutPolicyWithContext add context support for PutPolicy
+func (s *Bucket) PutPolicyWithContext(ctx context.Context, input *PutBucketPolicyInput) (*PutBucketPolicyOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	r, x, err := s.PutPolicyRequest(input)
 
 	if err != nil {
 		return x, err
 	}
 
-	err = r.Send()
+	err = r.SendWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1645,6 +2503,99 @@ func (v *PutBucketPolicyInput) Validate() error {
 
 // PutBucketPolicyOutput presents output for PutBucketPolicy.
 type PutBucketPolicyOutput struct {
+	StatusCode *int `location:"statusCode"`
+
+	RequestID *string `location:"requestID"`
+}
+
+// PutReplication does Set Replication information of the bucket.
+// Documentation URL: https://docs.uit.com.cn/uitstor/api/bucket/replication/put_replication.html
+func (s *Bucket) PutReplication(input *PutBucketReplicationInput) (*PutBucketReplicationOutput, error) {
+	return s.PutReplicationWithContext(context.Background(), input)
+}
+
+// PutReplicationWithContext add context support for PutReplication
+func (s *Bucket) PutReplicationWithContext(ctx context.Context, input *PutBucketReplicationInput) (*PutBucketReplicationOutput, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	r, x, err := s.PutReplicationRequest(input)
+
+	if err != nil {
+		return x, err
+	}
+
+	err = r.SendWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestID := r.HTTPResponse.Header.Get(http.CanonicalHeaderKey("X-QS-Request-ID"))
+	x.RequestID = &requestID
+
+	return x, err
+}
+
+// PutReplicationRequest creates request and output object of PutBucketReplication.
+func (s *Bucket) PutReplicationRequest(input *PutBucketReplicationInput) (*request.Request, *PutBucketReplicationOutput, error) {
+
+	if input == nil {
+		input = &PutBucketReplicationInput{}
+	}
+
+	properties := *s.Properties
+
+	o := &data.Operation{
+		Config:        s.Config,
+		Properties:    &properties,
+		APIName:       "PUT Bucket Replication",
+		RequestMethod: "PUT",
+		RequestURI:    "/<bucket-name>?replication",
+		StatusCodes: []int{
+			200, // OK
+		},
+	}
+
+	x := &PutBucketReplicationOutput{}
+	r, err := request.New(o, input, x)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return r, x, nil
+}
+
+// PutBucketReplicationInput presents input for PutBucketReplication.
+type PutBucketReplicationInput struct {
+	// Bucket Replication rules
+	Rules []*RulesType `json:"rules" name:"rules" location:"elements"` // Required
+
+}
+
+// Validate validates the input for PutBucketReplication.
+func (v *PutBucketReplicationInput) Validate() error {
+
+	if len(v.Rules) == 0 {
+		return errors.ParameterRequiredError{
+			ParameterName: "Rules",
+			ParentName:    "PutBucketReplicationInput",
+		}
+	}
+
+	if len(v.Rules) > 0 {
+		for _, property := range v.Rules {
+			if err := property.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// PutBucketReplicationOutput presents output for PutBucketReplication.
+type PutBucketReplicationOutput struct {
 	StatusCode *int `location:"statusCode"`
 
 	RequestID *string `location:"requestID"`
